@@ -1,0 +1,359 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Advanced Notes App with Login</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: #f8fafc;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      margin-top: 3rem;
+      margin-bottom: 3rem;
+      background: #fff;
+      padding: 2rem 2.5rem;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(60, 60, 130, 0.07);
+      width: 98%;
+      max-width: 500px;
+    }
+    #notes-container { display: none; } /* Hidden by default */
+    h2 {
+      margin-top: 0;
+      font-weight: 700;
+      letter-spacing: -1px;
+      color: #2d3046;
+      text-align: center;
+    }
+    .input-group {
+      margin-bottom: 1.4rem;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      margin: 0.5rem 0 0 0;
+      background: #f3f5fa;
+      border: 1px solid #e1e5ee;
+      border-radius: 10px;
+      font-size: 1rem;
+      resize: none;
+      box-sizing: border-box;
+      transition: border 0.2s;
+    }
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: #6d87ee;
+    }
+    button {
+      margin-top: 0.6rem;
+      width: 100%;
+      padding: 0.85rem;
+      background: linear-gradient(90deg,#6d87ee 25%, #adb6ed 100%);
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.18s;
+      box-shadow: 0 2px 6px rgba(70, 100, 220, 0.09);
+    }
+    button:hover {
+      background: linear-gradient(90deg,#5b73d5 10%, #8d95ce 100%);
+    }
+    .secondary-btn {
+        background: #e9ecf5;
+        color: #555d82;
+        font-weight: normal;
+    }
+    .secondary-btn:hover {
+        background: #dde1ee;
+    }
+    .notes-list {
+      margin-top: 2rem;
+    }
+    .note-card {
+      background: #f3f5fa;
+      box-shadow: 0 1px 6px rgba(150,170,220,0.06);
+      border-radius: 14px;
+      padding: 1rem 1.2rem 0.8rem 1.2rem;
+      margin-bottom: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      animation: fadeIn 0.5s;
+    }
+    .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    .logout-btn {
+        background: none;
+        color: #7a88b8;
+        font-size: 0.9rem;
+        padding: 5px 12px;
+        width: auto;
+        box-shadow: none;
+    }
+    .logout-btn:hover {
+        background: #e9ecf5;
+        color: #5b73d5;
+    }
+    .note-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .note-title {
+      font-size: 1.06rem;
+      color: #323465;
+      font-weight: bold;
+      margin: 0 0 0.2rem 0;
+      flex: 1;
+      word-break: break-word;
+    }
+    .note-content {
+      color: #555d82;
+      font-size: 0.96rem;
+      margin-bottom: 0.4rem;
+      margin-top: 0.2rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .deleteBtn, .editBtn {
+      background: none;
+      border: none;
+      color: #8497ce;
+      font-size: 1rem;
+      margin-left: 0.5rem;
+      cursor: pointer;
+      padding: 2px 5px;
+      border-radius: 7px;
+      transition: background 0.16s, color 0.14s;
+    }
+    .deleteBtn:hover {
+      color: #e15151;
+      background: #ffeaea;
+    }
+    .editBtn:hover {
+      color: #6382ff;
+      background: #e1eefd;
+    }
+    @media (max-width: 600px) {
+      .container { max-width: 97%; padding: 1.1rem 0.3rem; }
+      button { font-size: 1rem;  }
+    }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(15px);} to{opacity:1; transform:none;} }
+  </style>
+</head>
+<body>
+
+  <div id="auth-container" class="container">
+    <h2>Login or Register</h2>
+    <div class="input-group">
+      <input id="username" placeholder="Username" autocomplete="username"/>
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password"/>
+    </div>
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn" class="secondary-btn">Register</button>
+  </div>
+
+  <div id="notes-container" class="container">
+    <div class="app-header">
+        <h2 id="welcome-msg" style="margin: 0;">My Notes</h2>
+        <button id="logoutBtn" class="logout-btn">Logout</button>
+    </div>
+    <div class="input-group">
+      <input id="title" placeholder="Note title..." maxlength="80"/>
+      <textarea id="content" rows="3" placeholder="Write your note..."></textarea>
+    </div>
+    <button id="addBtn">Add Note</button>
+    <div class="notes-list" id="notes"></div>
+  </div>
+
+  <script>
+    // --- STATE MANAGEMENT ---
+    let currentUser = null;
+    let userNotes = [];
+    let editingIndex = null;
+
+    // --- DOM ELEMENTS ---
+    const authContainer = document.getElementById('auth-container');
+    const notesContainer = document.getElementById('notes-container');
+    const welcomeMsg = document.getElementById('welcome-msg');
+    
+    // --- CORE APP LOGIC ---
+
+    // Gets all users from localStorage.
+    function getUsers() {
+        return JSON.parse(localStorage.getItem('notes_users') || '[]');
+    }
+
+    // Saves all users to localStorage.
+    function saveUsers(users) {
+        localStorage.setItem('notes_users', JSON.stringify(users));
+    }
+    
+    // Generates the unique localStorage key for the current user's notes.
+    function getNotesKey() {
+        return `notes_app_${currentUser}`;
+    }
+
+    // Loads notes for the current user from localStorage.
+    function loadNotes() {
+        userNotes = JSON.parse(localStorage.getItem(getNotesKey()) || '[]');
+    }
+
+    // Saves notes for the current user to localStorage.
+    function saveNotes() {
+        localStorage.setItem(getNotesKey(), JSON.stringify(userNotes));
+    }
+
+    function renderNotes() {
+      const notesDiv = document.getElementById('notes');
+      if (userNotes.length === 0) {
+        notesDiv.innerHTML = `<div style="text-align:center; color:#a8b2d3;">No notes yet. Create your first one!</div>`;
+        return;
+      }
+      notesDiv.innerHTML = userNotes.map((n, i) => `
+        <div class='note-card'>
+          <div class="note-header">
+            <div class="note-title">${n.title}</div>
+            <div>
+              <button class="editBtn" title="Edit" onclick="editNote(${i})">&#9998;</button>
+              <button class="deleteBtn" title="Delete" onclick="deleteNote(${i})">&#128465;</button>
+            </div>
+          </div>
+          <div class="note-content">${n.content}</div>
+        </div>
+      `).join('');
+    }
+
+    function handleAddOrUpdateNote() {
+      let title = document.getElementById('title').value.trim();
+      let content = document.getElementById('content').value.trim();
+      if (!title || !content) return alert('Please fill in both the title and content fields.');
+
+      if (editingIndex !== null) {
+        userNotes[editingIndex] = { title, content };
+        editingIndex = null;
+        document.getElementById('addBtn').textContent = 'Add Note';
+      } else {
+        userNotes.unshift({ title, content });
+      }
+      saveNotes();
+      document.getElementById('title').value = '';
+      document.getElementById('content').value = '';
+      renderNotes();
+    }
+
+    function deleteNote(index) {
+      if (confirm('Are you sure you want to delete this note?')) {
+        userNotes.splice(index, 1);
+        saveNotes();
+        renderNotes();
+      }
+    }
+
+    function editNote(index) {
+      const note = userNotes[index];
+      document.getElementById('title').value = note.title;
+      document.getElementById('content').value = note.content;
+      editingIndex = index;
+      document.getElementById('addBtn').textContent = 'Update Note';
+      document.getElementById('title').focus();
+    }
+    
+    // --- AUTHENTICATION LOGIC ---
+
+    function handleLogin() {
+        const username = document.getElementById('username').value.trim().toLowerCase();
+        const password = document.getElementById('password').value;
+        if (!username || !password) return alert('Please enter both username and password.');
+
+        const users = getUsers();
+        const user = users.find(u => u.username === username && u.password === password);
+
+        if (user) {
+            currentUser = user.username;
+            sessionStorage.setItem('notes_currentUser', currentUser);
+            initializeApp();
+        } else {
+            alert('Invalid username or password.');
+        }
+    }
+
+    function handleRegister() {
+        const username = document.getElementById('username').value.trim().toLowerCase();
+        const password = document.getElementById('password').value;
+        if (!username || !password) return alert('Please enter both username and password.');
+
+        const users = getUsers();
+        if (users.some(u => u.username === username)) {
+            return alert('Username already exists. Please choose another one.');
+        }
+
+        users.push({ username, password });
+        saveUsers(users);
+        alert('Registration successful! You can now log in.');
+        document.getElementById('password').value = '';
+    }
+
+    function handleLogout() {
+        currentUser = null;
+        sessionStorage.removeItem('notes_currentUser');
+        initializeApp();
+    }
+
+
+    // --- INITIALIZATION ---
+    function initializeApp() {
+        currentUser = sessionStorage.getItem('notes_currentUser');
+        
+        if (currentUser) {
+            // User is logged in
+            authContainer.style.display = 'none';
+            notesContainer.style.display = 'block';
+            welcomeMsg.textContent = `Welcome, ${currentUser}!`;
+            loadNotes();
+            renderNotes();
+        } else {
+            // User is not logged in
+            authContainer.style.display = 'block';
+            notesContainer.style.display = 'none';
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+    }
+    
+    // --- EVENT LISTENERS ---
+    document.getElementById('loginBtn').addEventListener('click', handleLogin);
+    document.getElementById('registerBtn').addEventListener('click', handleRegister);
+    document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+    document.getElementById('addBtn').addEventListener('click', handleAddOrUpdateNote);
+
+    // Accessibility: allow Enter+Ctrl to save in textarea
+    document.getElementById('content').addEventListener('keydown', function(e){
+      if (e.ctrlKey && e.key === 'Enter') handleAddOrUpdateNote();
+    });
+
+    // Make functions accessible to inline HTML onclick attributes
+    window.deleteNote = deleteNote;
+    window.editNote = editNote;
+    
+    // Run the app
+    initializeApp();
+
+  </script>
+</body>
+</html>
